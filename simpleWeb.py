@@ -1,7 +1,35 @@
 from flask import Flask, request, render_template, jsonify, _app_ctx_stack
+import sqlite3
 
+
+'''
+CREATE TABLE appdata (
+    id INTEGER AUTO_INCREMENT,
+    time datetime DEFAULT current_timestamp,
+    kor INTEGER,
+    math INTEGER,
+    PRIMARY KEY(id)
+)
+'''
+
+DATABASE = 'data.db'
 
 app = Flask(__name__, static_folder='static', template_folder='template')
+
+
+# 데이터베이스 열기
+def get_db():
+    top = _app_ctx_stack.top
+    if not hasattr(top, 'sqlite_db'):
+        top.sqlite_db = sqlite3.connect(DATABASE)
+    return top.sqlite_db
+
+# 데이터베이스 정리
+@app.teardown_appcontext
+def close_connection(exception):
+    top = _app_ctx_stack.top
+    if hasattr(top, 'sqlite_db'):
+        top.sqlite_db.close()
 
 
 @app.route('/')
@@ -29,6 +57,38 @@ def add():
         b = int(data['b'])
     return str(a+b)
 
+@app.route('/reset', methods=['POST'])
+def reset():
+    if request.is_json:
+        data = request.get_json()
+        if data['API_KEY'] == '1234':
+            try:
+                cur = get_db().cursor()
+                cur.execute('DROP TABLE IF EXISTS appdata')
+                cur.execute('CREATE TABLE appdata (id INTEGER AUTO_INCREMENT,time datetime DEFAULT current_timestamp,kor INTEGER, math INTEGER,PRIMARY KEY(id))')
+                get_db().commit()
+            except:
+                get_db().rollback()
+            return "Successfully reset"
+        else:
+            return 'Invalid API_KEY'
+    else:
+        return 'Invalid request'
+
+@app.route('/insert', methods=['POST'])
+def insert():
+    data = request.get_json()
+    kor = data['kor']
+    math = data['math']
+    try:
+        cur = get_db().cursor()
+        cur.execute('INSERT INTO appdata (kor, math) VALUES (?, ?)', (kor, math))
+        get_db().commit()
+    except:
+        get_db().rollback()
+    return jsonify(code=0)
+    
+    
 if __name__ == '__main__':
     app.run(
     host="127.0.0.1",
