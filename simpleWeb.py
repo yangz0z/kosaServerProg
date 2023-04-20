@@ -105,7 +105,8 @@ def select():
         result = cur.fetchall()
     except:
         get_db().rollback()
-    return 'OK'
+    return render_template('select.html', data = result)
+
     
 if __name__ == '__main__':
     app.run(
