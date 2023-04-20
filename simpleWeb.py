@@ -87,7 +87,25 @@ def insert():
     except:
         get_db().rollback()
     return jsonify(code=0)
-    
+
+# 데이터베이스 처리 결과를 딕셔너리 형태로 반환
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
+@app.route('/select')
+def select():
+    result = []
+    try:
+        get_db().row_factory = dict_factory
+        cur = get_db().cursor()
+        cur.execute('SELECT time, kor, math FROM appdata')
+        result = cur.fetchall()
+    except:
+        get_db().rollback()
+    return 'OK'
     
 if __name__ == '__main__':
     app.run(
